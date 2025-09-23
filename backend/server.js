@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/database');
 
 const authRoutes = require('./routes/authRoutes'); 
+const invoiceRoutes = require('./routes/invoiceRoutes'); 
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use(express.json());
 
 // Define routes
 app.use('/api/auth', authRoutes); 
+app.use('/api/invoices', invoiceRoutes); 
 
 // Start the server
 const PORT = process.env.PORT || 5000;
