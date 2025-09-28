@@ -5,7 +5,7 @@ const Invoice = require('../models/Invoice');
 // @access Private
 exports.createInvoice = async (req, res) => {
     try {
-        const user = req.user; 
+        const userId = req.user.id; // Perbaiki: gunakan req.user.id
         const {
             invoiceNumber, 
             invoiceDate, 
@@ -29,7 +29,7 @@ exports.createInvoice = async (req, res) => {
         const total = subTotal + taxTotal; 
 
         const invoice = new Invoice({
-            user,
+            user: userId, // Perbaiki: gunakan userId
             invoiceNumber, 
             invoiceDate, 
             dueDate,
@@ -58,24 +58,35 @@ exports.createInvoice = async (req, res) => {
 // @access Private
 exports.getInvoices = async (req, res) => {
     try {
-        const invoices = await Invoice.find().populate('user', 'name email'); 
+        const invoices = await Invoice.find({ user: req.user.id }).populate('user', 'name email'); 
         res.status(200).json(invoices); 
     } catch (error) {
+        console.error('Error in getInvoices:', error); // Tambah logging
         res
             .status(500)
             .json({ message: 'Error fetching invoices', error: error.message });
     }
 }; 
 
-// @desc   Get  single invoice for the logged-in user
+// @desc   Get single invoice for the logged-in user
 // @route  GET /api/invoices/:id
 // @access Private
 exports.getInvoiceById = async (req, res) => {
     try {
-        const invoice = await Invoice.findById(req.params.id).populate('user', 'name email'); 
+        const invoice = await Invoice.findOne({ 
+            _id: req.params.id, 
+            user: req.user.id // Pastikan hanya user yang memiliki invoice yang bisa mengakses
+        }).populate('user', 'name email'); 
+        
         if (!invoice) {
             return res.status(404).json({ message: 'Invoice not found' }); 
         }
+
+        // Check if the invoice belongs to the user 
+        if (invoice.user.toString() !== req.user.id) {
+            return res.status(401).json({ message: "Not authorized" }); 
+        }
+
         res.status(200).json(invoice);
     } catch (error) {
          res
@@ -84,7 +95,7 @@ exports.getInvoiceById = async (req, res) => {
     }
 };
 
-// @desc   Update  single invoice for the logged-in user
+// @desc   Update single invoice for the logged-in user
 // @route  PUT /api/invoices/:id
 // @access Private
 exports.updateInvoice = async (req, res) => {
@@ -101,7 +112,7 @@ exports.updateInvoice = async (req, res) => {
             status
         } = req.body; 
 
-        // recalcuate totals if items changed 
+        // recalculate totals if items changed 
         let subTotal = 0; 
         let taxTotal = 0; 
 
@@ -114,8 +125,8 @@ exports.updateInvoice = async (req, res) => {
 
         const total = subTotal + taxTotal; 
 
-        const updatedInvoice = await Invoice.findByIdAndUpdate(
-            req.params.id, 
+        const updatedInvoice = await Invoice.findOneAndUpdate(
+            { _id: req.params.id, user: req.user.id }, // Pastikan user hanya update invoice miliknya
             {
                 invoiceNumber, 
                 invoiceDate, 
@@ -133,7 +144,7 @@ exports.updateInvoice = async (req, res) => {
             {
                 new: true, 
             } 
-        ); 
+        ).populate('user', 'name email'); 
 
         if (!updatedInvoice) return res.status(404).json({ message: 'Invoice not found' });
 
@@ -150,7 +161,11 @@ exports.updateInvoice = async (req, res) => {
 // @access Private
 exports.deleteInvoice = async (req, res) => {
     try {
-        const invoice = await Invoice.findByIdAndDelete(req.params.id);
+        const invoice = await Invoice.findOneAndDelete({ 
+            _id: req.params.id, 
+            user: req.user.id // Pastikan user hanya delete invoice miliknya
+        });
+        
         if (!invoice) {
             return res.status(404).json({ message: 'Invoice not found' }); 
         }

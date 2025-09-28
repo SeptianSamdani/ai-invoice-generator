@@ -3,7 +3,6 @@ import { createContext } from "react";
 import { useState } from "react";
 import { useContext } from "react";
 
-
 const AuthContext = createContext(); 
 
 export const useAuth = () => {
