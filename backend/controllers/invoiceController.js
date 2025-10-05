@@ -5,7 +5,7 @@ const Invoice = require('../models/Invoice');
 // @access Private
 exports.createInvoice = async (req, res) => {
     try {
-        const userId = req.user.id; // Perbaiki: gunakan req.user.id
+        const userId = req.user.id; 
         const {
             invoiceNumber, 
             invoiceDate, 
@@ -75,7 +75,7 @@ exports.getInvoiceById = async (req, res) => {
     try {
         const invoice = await Invoice.findOne({ 
             _id: req.params.id, 
-            user: req.user.id // Pastikan hanya user yang memiliki invoice yang bisa mengakses
+            user: req.user.id
         }).populate('user', 'name email'); 
         
         if (!invoice) {
@@ -83,7 +83,7 @@ exports.getInvoiceById = async (req, res) => {
         }
 
         // Check if the invoice belongs to the user 
-        if (invoice.user.toString() !== req.user.id) {
+        if (invoice.user._id.toString() !== req.user.id) {
             return res.status(401).json({ message: "Not authorized" }); 
         }
 

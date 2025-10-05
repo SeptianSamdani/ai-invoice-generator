@@ -8,7 +8,6 @@ import Footer from '../../components/landing/Footer'
 
 const LandingPage = () => {
   return (
-    // Ganti dari 'bg-[#ffffff]' menjadi gradient background
     <div className='relative bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden text-gray-600'>
       {/* Tambahkan animated background pattern */}
       <div className="fixed inset-0 opacity-20 pointer-events-none">

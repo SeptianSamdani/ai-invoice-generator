@@ -1,3 +1,4 @@
+// ========== DashboardLayout.jsx ==========
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect, useState, useRef } from 'react'; 
@@ -92,7 +93,7 @@ const DashboardLayout = ({ children, activeMenu }) => {
             onClick={logout}
           >
             <LogOut className="flex-shrink-0 w-6 h-6" />
-            {!sidebarCollapsed && <span className='font-medium whitespace-nowrap'>Logout</span>}
+            {!sidebarCollapsed && <span className='font-medium whitespace-nowrap'>Keluar</span>}
           </button>
         </div>
       </div>
@@ -117,10 +118,10 @@ const DashboardLayout = ({ children, activeMenu }) => {
             )}
             <div>
               <h1 className="text-xl font-semibold text-gray-800 md:text-2xl">
-                Welcome back, {user?.name || 'User'}! 👋
+                Selamat datang kembali, {user?.name || 'Pengguna'}! 👋
               </h1>
               <p className="text-sm text-gray-500">
-                Here's your Invoice Overview
+                Berikut ringkasan Faktur Anda
               </p>
             </div>
           </div>
@@ -130,7 +131,7 @@ const DashboardLayout = ({ children, activeMenu }) => {
               isOpen={profileDropdownOpen}
               onToggle={toggleProfileDropdown}
               avatar={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=e0e7ff&color=3730a3`}
-              companyName={user?.name || 'Company Name'}
+              companyName={user?.name || 'Nama Perusahaan'}
               email={user?.email || 'user@example.com'}
               onLogout={logout}
             />

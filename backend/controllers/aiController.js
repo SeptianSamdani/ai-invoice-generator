@@ -9,18 +9,18 @@ const parseInvoiceFromText = async (req, res) => {
     const { text } = req.body;
 
     if (!text) {
-        return res.status(400).json({ message: 'Text is required' });
+        return res.status(400).json({ message: 'Teks diperlukan' });
     }
 
     try {
         const prompt = `
-            You are an expert invoice data extraction AI. Analyze the following text and extract the relevant invoice details in JSON format. 
+            Anda adalah AI ahli dalam mengekstrak data faktur. Analisis teks berikut dan ekstrak detail faktur yang relevan dalam format JSON. 
 
-            The output MUST be a valid JSON object with the following fields:
+            Output HARUS berupa objek JSON yang valid dengan kolom-kolom berikut:
             {
                 "clientName": "string", 
-                "email": "string (if avaliable)", 
-                "address": "string (if avaliable)",
+                "email": "string (jika tersedia)", 
+                "address": "string (jika tersedia)",
                 "items": [
                     {
                         "name": "string", 
@@ -30,37 +30,35 @@ const parseInvoiceFromText = async (req, res) => {
                 ]
             }
             
-            Here is the text to parse: 
-            --- TEXT START ---
+            Berikut adalah teks untuk diurai: 
+            --- MULAI TEKS ---
             ${text}
-            --- TEXT END ---
+            --- AKHIR TEKS ---
 
-            Extract the data and provide the JSON output only, without any additional text or explanation.
-        `
+            Ekstrak data dan berikan hanya output JSON, tanpa teks atau penjelasan tambahan.
+        `;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
             contents: prompt, 
         }); 
 
-        const responseText = response.text; 
+        let responseText = response.text; 
 
         if (typeof responseText !== 'string') {
-            
             if (typeof response.text === 'function') {
                 responseText = response.text(); 
             } else {
-                throw new Error('Response text is not a string or function');
+                throw new Error('Teks respons bukan string atau fungsi');
             }
         }
 
         const cleanedJSON = responseText.replace(/```json/g, '').replace(/```/g, '').trim(); 
-
         const parsedData = JSON.parse(cleanedJSON); 
 
         res.status(200).json(parsedData); 
     } catch (error) {
-        return res.status(500).json({ message: 'Error parsing invoice with AI', error:error.message });
+        return res.status(500).json({ message: 'Terjadi kesalahan saat mengurai faktur dengan AI', error:error.message });
     }
 };
 
@@ -68,27 +66,27 @@ const generateReminderEmail = async (req, res) => {
     const { invoiceId } = req.body; 
 
     if (!invoiceId) {
-        return res.status(400).json({ message: 'Invoice ID is required' }); 
+        return res.status(400).json({ message: 'ID Faktur diperlukan' }); 
     }
     
     try {
         const invoice = await Invoice.findById(invoiceId); 
 
         if (!invoice) {
-            return res.status(404).json({ message: 'Invoice not found' }); 
+            return res.status(404).json({ message: 'Faktur tidak ditemukan' }); 
         }
 
         const prompt = `
-            You are a professional and polite accounting assistant. Write a friendly reminder email to a client about an overdue or upcoming invoice payment. 
+            Anda adalah asisten akuntansi yang profesional dan sopan. Tulis email pengingat yang ramah kepada klien tentang pembayaran faktur yang akan atau sudah jatuh tempo.
 
-            Use the following details to personalize the email: 
-            - Client Name: ${invoice.billTo.clientName}
-            - Invoice Number: ${invoice.invoiceNumber}
-            - Amount Due: ${invoice.total.toFixed(2)}
-            - Due Date: ${new Date(invoice.dueDate).toLocaleDateString()}
+            Gunakan detail berikut untuk mempersonalisasi email: 
+            - Nama Klien: ${invoice.billTo.clientName}
+            - Nomor Faktur: ${invoice.invoiceNumber}
+            - Jumlah Tagihan: ${invoice.total.toFixed(2)}
+            - Tanggal Jatuh Tempo: ${new Date(invoice.dueDate).toLocaleDateString()}
 
-            The tone should be friendly and clear. Keep it concise. Start the email with "Subject:", 
-        `
+            Nada email harus ramah dan jelas. Buatlah ringkas. Mulai email dengan "Subjek:", 
+        `;
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
@@ -97,7 +95,7 @@ const generateReminderEmail = async (req, res) => {
 
         res.status(200).json({ reminderText: response.text }); 
     } catch (error) {
-        return res.status(500).json({ message: 'Error generating reminder email with AI', error:error.message });
+        return res.status(500).json({ message: 'Terjadi kesalahan saat membuat email pengingat dengan AI', error:error.message });
     }
 }; 
 
@@ -106,10 +104,10 @@ const getDashboardSummary = async (req, res) => {
         const invoices = await Invoice.find({ user: req.user.id }); 
 
         if (invoices.length === 0) {
-            return res.status(200).json({ insights: 'No invoices available to summarize.' });
+            return res.status(200).json({ insights: 'Tidak ada faktur yang tersedia untuk diringkas.' });
         }
 
-        // Process and summarize data 
+        // Proses dan ringkas data
         const totalInvoices = invoices.length; 
         const paidInvoices = invoices.filter(inv => inv.status === 'Paid'); 
         const unpaidInvoices = invoices.filter(inv => inv.status === 'Unpaid');
@@ -117,26 +115,26 @@ const getDashboardSummary = async (req, res) => {
         const totalOutstanding = unpaidInvoices.reduce((acc, inv) => acc + inv.total, 0); 
 
         const dataSummary = `
-            - Total Number of Invoices: ${totalInvoices}
-            - Total Paid Invoices: ${paidInvoices.length}
-            - Total Unpaid Invoices: ${unpaidInvoices.length}
-            - Total Revenue from Paid Invoices: ${totalRevenue.toFixed(2)}
-            - Total Outstanding Amount from Unpaid / Pending Invoices: ${totalOutstanding.toFixed(2)}
-            - Recent Invoices (last 5): ${invoices.slice(0, 5).map(inv => `Invoice #${inv.invoiceNumber} for ${inv.total.toFixed(2)} with status ${inv.status}`).join('; ')}
-        `
+            - Jumlah Total Faktur: ${totalInvoices}
+            - Total Faktur Lunas: ${paidInvoices.length}
+            - Total Faktur Belum Lunas: ${unpaidInvoices.length}
+            - Total Pendapatan dari Faktur Lunas: ${totalRevenue.toFixed(2)}
+            - Total Tagihan Tertunggak dari Faktur Belum Lunas / Tertunda: ${totalOutstanding.toFixed(2)}
+            - Faktur Terbaru (5 terakhir): ${invoices.slice(0, 5).map(inv => `Faktur #${inv.invoiceNumber} sebesar ${inv.total.toFixed(2)} dengan status ${inv.status}`).join('; ')}
+        `;
 
         const prompt = `
-            You are a friendly and insightful financial analyst for small businesses owner. 
-            Based on the following summary of their invoice data, provide 2 - 3 concise and actionable insights. 
-            Each insight should be a short string JSON array. 
-            The insights should be encouraging and helpful. Do not just repeat the data. 
-            For example, if there is a high outstanding amount, suggest sending reminders. If revenue is high, be encouraging. 
+            Anda adalah seorang analis keuangan yang ramah dan berwawasan luas untuk pemilik usaha kecil. 
+            Berdasarkan ringkasan data faktur berikut, berikan 2 - 3 wawasan yang ringkas dan dapat ditindaklanjuti. 
+            Setiap wawasan harus ada di dalam array JSON string. 
+            Wawasan tersebut harus memberi semangat dan membantu. Jangan hanya mengulang data. 
+            Sebagai contoh, jika ada jumlah tagihan yang belum dibayar tinggi, sarankan untuk mengirim pengingat. Jika pendapatan tinggi, berikan dorongan. 
 
-            Data Summary: 
+            Ringkasan Data: 
             ${dataSummary}
 
-            Return your response as a valid JSON Object with a single key "insights" which is an array of strings. 
-            Example Format: { "insights": ["Your revenue is looking strong this month!", "You have 5 overdue invoices. Consider sending reminder to get paid faster" ]}
+            Kembalikan respons Anda sebagai Objek JSON yang valid dengan satu kunci "insights" yang merupakan array string. 
+            Contoh Format: { "insights": ["Pendapatan Anda terlihat kuat bulan ini!", "Anda memiliki 5 faktur yang telah jatuh tempo. Pertimbangkan untuk mengirim pengingat agar dibayar lebih cepat" ]}
         `; 
 
         const response = await ai.models.generateContent({
@@ -150,7 +148,7 @@ const getDashboardSummary = async (req, res) => {
 
         res.status(200).json({ insights: jsonData.insights });
     } catch (error) {
-        return res.status(500).json({ message: 'Error to parse Invoice Data from text', error:error.message });
+        return res.status(500).json({ message: 'Terjadi kesalahan saat mengurai Data Faktur dari teks', error:error.message });
     }
 }; 
 

@@ -12,9 +12,10 @@ import ProfilePage from './pages/Profile/ProfilePage';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Invoices from './pages/Invoices/Invoices';
 import CreateInvoice from './pages/Invoices/CreateInvoice';
-import ViewInvoice from './pages/Invoices/ViewInvoice';
+import EditInvoice from './pages/Invoices/EditInvoice';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import InvoiceDetail from './pages/Invoices/InvoiceDetail';
 
 const App = () => {
   return (
@@ -30,8 +31,11 @@ const App = () => {
           <Route path='/' element={<ProtectedRoute />}>
             <Route path='dashboard' element={<Dashboard />} />
             <Route path='invoices' element={<Invoices />} />
-            <Route path='invoices/create' element={<CreateInvoice />} />
-            <Route path='invoices/:id' element={<ViewInvoice />} />
+            <Route path='invoices/new' element={<CreateInvoice />} />
+            {/* Edit Invoice - Component terpisah */}
+            <Route path='invoices/edit/:id' element={<EditInvoice />} />
+            {/* View Invoice Detail */}
+            <Route path='invoices/view/:id' element={<InvoiceDetail />} />
             <Route path='profile' element={<ProfilePage />} />
           </Route>
 
@@ -40,12 +44,28 @@ const App = () => {
       </Router>
 
       <Toaster
+        position="top-right"
         toastOptions={{ 
           className: "", 
           style: {
-            fontSize: "13px", 
-          }, 
-         }}
+            fontSize: "14px",
+            padding: "12px 16px",
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
       />
     </AuthProvider>
   )

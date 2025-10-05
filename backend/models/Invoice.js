@@ -26,7 +26,7 @@ const invoiceSchema = new mongoose.Schema({
     dueDate: {
         type: Date, 
     }, 
-    billForm: {
+    billFrom: {
         businessName: { type: String },
         email: { type: String }, 
         address: { type: String },

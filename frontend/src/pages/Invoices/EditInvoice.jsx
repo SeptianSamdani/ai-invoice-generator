@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import moment from 'moment';
 import axiosInstance from '../../utils/axiosInstance';
@@ -8,7 +8,7 @@ import Button from '../../components/ui/Button';
 import InputField from '../../components/ui/InputField';
 import TextareaField from '../../components/ui/TextareaField';
 import SelectField from '../../components/ui/SelectField';
-import { Plus, Trash2, FileText, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Trash2, FileText, Calendar, DollarSign, Loader2, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast'; 
 
 const formatCurrency = (amount) => {
@@ -19,112 +19,64 @@ const formatCurrency = (amount) => {
     }).format(amount || 0);
 };
 
-const CreateInvoice = ({ existingInvoice, onSave }) => {
+const EditInvoice = () => {
+    const { id } = useParams();
     const navigate = useNavigate();
-    const location = useLocation();
     const { user } = useAuth();
 
-    const getInitialFormData = () => ({
-        invoiceNumber: "",
-        invoiceDate: new Date().toISOString().split("T")[0],
-        dueDate: "",
-        billFrom: {
-            businessName: user?.businessName ?? "",
-            email: user?.email ?? "",
-            address: user?.address ?? "",
-            phone: user?.phone ?? "",
-        },
-        billTo: { 
-            clientName: "", 
-            email: "", 
-            address: "", 
-            phone: "" 
-        },
-        items: [{ 
-            name: "", 
-            quantity: 1, 
-            unitPrice: 0, 
-            taxPercent: 0 
-        }],
-        notes: "",
-        paymentTerms: "Net 15",
-        status: "Menunggu"
-    });
-
-    const [formData, setFormData] = useState(getInitialFormData());
+    const [formData, setFormData] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isGeneratingNumber, setIsGeneratingNumber] = useState(!existingInvoice);
+    const [isFetching, setIsFetching] = useState(true);
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
-        let isMounted = true;
-
-        const aiData = location.state?.aiData;
-
-        if (aiData) {
-            setFormData(prev => ({
-                ...prev,
-                billTo: {
-                    clientName: aiData.clientName ?? '',
-                    email: aiData.email ?? '',
-                    address: aiData.address ?? '',
-                    phone: aiData.phone ?? ''
-                },
-                items: aiData.items && aiData.items.length > 0 
-                    ? aiData.items.map(item => ({
-                        name: item.name ?? '',
-                        quantity: item.quantity ?? 1,
-                        unitPrice: item.unitPrice ?? 0,
-                        taxPercent: item.taxPercent ?? 0
-                    }))
-                    : [{ name: "", quantity: 1, unitPrice: 0, taxPercent: 0 }],
-            }));
-        }
-
-        if (existingInvoice) {
-            setFormData({
-                ...existingInvoice,
-                invoiceDate: moment(existingInvoice.invoiceDate).format("YYYY-MM-DD"),
-                dueDate: moment(existingInvoice.dueDate).format("YYYY-MM-DD"),
-            });
-        } else {
-            const generateNewInvoiceNumber = async () => {
-                setIsGeneratingNumber(true);
-                try {
-                    const response = await axiosInstance.get(API_PATHS.INVOICE.GET_ALL_INVOICES);
-                    const invoices = response.data;
-                    let maxNum = 0;
-                    invoices.forEach((inv) => {
-                        const num = parseInt(inv.invoiceNumber.split("-")[1]);
-                        if (!isNaN(num) && num > maxNum) maxNum = num;
-                    });
-                    const newInvoiceNumber = `INV-${String(maxNum + 1).padStart(3, "0")}`;
-                    if (isMounted) {
-                        setFormData((prev) => ({ ...prev, invoiceNumber: newInvoiceNumber }));
-                    }
-                } catch (error) {
-                    console.error("Gagal membuat nomor faktur", error);
-                    if (isMounted) {
-                        setFormData((prev) => ({ ...prev, invoiceNumber: `INV-${Date.now().toString().slice(-5)}` }));
-                    }
-                }
-                if (isMounted) {
-                    setIsGeneratingNumber(false);
-                }
-            };
-            generateNewInvoiceNumber();
-        }
-
-        return () => {
-            isMounted = false;
+        const fetchInvoice = async () => {
+            try {
+                const response = await axiosInstance.get(API_PATHS.INVOICE.GET_INVOICES_BY_ID(id));
+                const invoice = response.data;
+                
+                setFormData({
+                    invoiceNumber: invoice.invoiceNumber,
+                    invoiceDate: moment(invoice.invoiceDate).format("YYYY-MM-DD"),
+                    dueDate: moment(invoice.dueDate).format("YYYY-MM-DD"),
+                    billFrom: {
+                        businessName: invoice.billFrom?.businessName || "",
+                        email: invoice.billFrom?.email || "",
+                        address: invoice.billFrom?.address || "",
+                        phone: invoice.billFrom?.phone || "",
+                    },
+                    billTo: { 
+                        clientName: invoice.billTo?.clientName || "", 
+                        email: invoice.billTo?.email || "", 
+                        address: invoice.billTo?.address || "", 
+                        phone: invoice.billTo?.phone || "" 
+                    },
+                    items: invoice.items.map(item => ({
+                        name: item.name || "",
+                        quantity: item.quantity || 1,
+                        unitPrice: item.unitPrice || 0,
+                        taxPercent: item.taxPercent || 0
+                    })),
+                    notes: invoice.notes || "",
+                    paymentTerms: invoice.paymentTerms || "Net 15",
+                    status: invoice.status || "Menunggu"
+                });
+            } catch (error) {
+                toast.error('Gagal memuat detail faktur');
+                console.error(error);
+                navigate('/invoices');
+            } finally {
+                setIsFetching(false);
+            }
         };
-    }, [existingInvoice, location.state, user]);
+
+        fetchInvoice();
+    }, [id, navigate]);
 
     const handleInputChange = (e, section, index) => {
         const { name, value, type } = e.target;
         const parsedValue = type === 'number' ? parseFloat(value) || 0 : value;
 
-        // Clear error for this field
         setErrors(prev => ({ ...prev, [name]: '' }));
 
         if (section === 'items') {
@@ -142,7 +94,10 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
     };
 
     const handleAddItem = () => {
-        setFormData({ ...formData, items: [...formData.items, { name: "", quantity: 1, unitPrice: 0, taxPercent: 0 }] });
+        setFormData({ 
+            ...formData, 
+            items: [...formData.items, { name: "", quantity: 1, unitPrice: 0, taxPercent: 0 }] 
+        });
     };
 
     const handleRemoveItem = (index) => {
@@ -155,14 +110,14 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
     };
 
     const { subTotal, taxTotal, total } = (() => {
+        if (!formData) return { subTotal: 0, taxTotal: 0, total: 0 };
+        
         let subTotal = 0, taxTotal = 0;
-        if (formData.items) {
-            formData.items.forEach((item) => {
-                const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
-                subTotal += itemTotal;
-                taxTotal += itemTotal * ((item.taxPercent || 0) / 100);
-            });
-        }
+        formData.items.forEach((item) => {
+            const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
+            subTotal += itemTotal;
+            taxTotal += itemTotal * ((item.taxPercent || 0) / 100);
+        });
         return { subTotal, taxTotal, total: subTotal + taxTotal };
     })();
 
@@ -214,23 +169,44 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
             total: (item.quantity || 0) * (item.unitPrice || 0) * (1 + (item.taxPercent || 0) / 100)
         })); 
 
-        const finalFormData = { ...formData, items: itemsWithTotal, subTotal, taxTotal, total };
+        const finalFormData = { 
+            ...formData, 
+            items: itemsWithTotal, 
+            subTotal, 
+            taxTotal, 
+            total 
+        };
 
-        if (onSave) {
-            await onSave(finalFormData); 
-        } else {
-            try {
-                await axiosInstance.post(API_PATHS.INVOICE.CREATE, finalFormData); 
-                toast.success("Faktur berhasil dibuat."); 
-                navigate("/invoices"); 
-            } catch (error) {
-                toast.error("Gagal membuat faktur.");
-                console.error(error); 
-            }
+        try {
+            await axiosInstance.put(API_PATHS.INVOICE.UPDATE_INVOICE(id), finalFormData); 
+            toast.success("Faktur berhasil diperbarui."); 
+            navigate(`/invoices/view/${id}`); 
+        } catch (error) {
+            toast.error("Gagal memperbarui faktur.");
+            console.error(error); 
+        } finally {
+            setIsLoading(false);
         }
-
-        setIsLoading(false); 
     };
+
+    if (isFetching) {
+        return (
+            <div className='flex justify-center items-center min-h-[400px]'>
+                <Loader2 className='w-8 h-8 animate-spin text-blue-600' />
+            </div>
+        );
+    }
+
+    if (!formData) {
+        return (
+            <div className='flex flex-col items-center justify-center min-h-[400px] gap-4'>
+                <p className='text-slate-600'>Faktur tidak ditemukan</p>
+                <Button onClick={() => navigate('/invoices')} icon={ArrowLeft}>
+                    Kembali ke Faktur
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-8 px-4 sm:px-6 lg:px-8">
@@ -239,15 +215,24 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
                     {/* Header */}
                     <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                                    <FileText className="text-blue-600" size={32} />
-                                    {existingInvoice ? "Ubah Faktur" : "Buat Faktur Baru"}
-                                </h2>
-                                <p className="text-gray-500 mt-1">Isi detail di bawah untuk membuat faktur Anda</p>
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Button 
+                                        type="button"
+                                        variant="ghost" 
+                                        onClick={() => navigate(`/invoices/view/${id}`)}
+                                        icon={ArrowLeft}
+                                        className="p-2"
+                                    />
+                                    <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                                        <FileText className="text-blue-600" size={32} />
+                                        Ubah Faktur
+                                    </h2>
+                                </div>
+                                <p className="text-gray-500 ml-14">Perbarui detail faktur di bawah ini</p>
                             </div>
-                            <Button type="submit" isLoading={isLoading || isGeneratingNumber} className="w-full sm:w-auto">
-                                {existingInvoice ? "Simpan Perubahan" : "Simpan Faktur"}
+                            <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
+                                Simpan Perubahan
                             </Button>
                         </div>
                     </div>
@@ -263,10 +248,8 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
                                 <InputField
                                     label="Nomor Faktur"
                                     name="invoiceNumber"
-                                    readOnly
                                     value={formData.invoiceNumber}
-                                    placeholder={isGeneratingNumber ? "Membuat..." : ""}
-                                    disabled
+                                    onChange={handleInputChange}
                                 />
                                 {errors.invoiceNumber && <p className="text-red-500 text-xs mt-1">{errors.invoiceNumber}</p>}
                             </div>
@@ -333,7 +316,6 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
                         {errors.items && <p className="text-red-500 text-sm mb-4 bg-red-50 p-3 rounded-lg">{errors.items}</p>}
                         
                         <div className="space-y-4">
-                            {/* Headers for desktop */}
                             <div className="hidden md:grid md:grid-cols-[3fr_1fr_1.5fr_1fr_1.5fr_auto] gap-4 text-xs uppercase text-gray-600 font-semibold px-3">
                                 <span>Nama Item</span>
                                 <span className="text-center">Jumlah</span>
@@ -390,7 +372,7 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
                         </div>
                     </div>
                     
-                    {/* Notes, Payment Terms & Total */}
+                    {/* Notes, Payment Terms, Status & Total */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 space-y-4">
                             <TextareaField 
@@ -406,6 +388,13 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
                                 value={formData.paymentTerms}
                                 onChange={handleInputChange}
                                 options={["Net 15", "Net 30", "Net 60", "Jatuh tempo saat diterima"]}
+                            />
+                            <SelectField 
+                                label="Status"
+                                name="status"
+                                value={formData.status}
+                                onChange={handleInputChange}
+                                options={["Menunggu", "Lunas", "Belum Lunas"]}
                             />
                         </div>
                         
@@ -430,8 +419,8 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
 
                     {/* Submit Button (Mobile) */}
                     <div className="sm:hidden bg-white rounded-xl shadow-lg p-4 border border-gray-200">
-                        <Button type="submit" isLoading={isLoading || isGeneratingNumber} className="w-full">
-                            {existingInvoice ? "Simpan Perubahan" : "Simpan Faktur"}
+                        <Button type="submit" isLoading={isLoading} className="w-full">
+                            Simpan Perubahan
                         </Button>
                     </div>
                 </form>
@@ -440,4 +429,4 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
     );
 };
 
-export default CreateInvoice;
+export default EditInvoice;
