@@ -51,9 +51,9 @@ const invoiceSchema = new mongoose.Schema({
         enum: ['Paid', 'Unpaid'], 
         default: 'Unpaid'
     }, 
-    subtotal: Number, 
-    taxTotal: Number, 
-    total: Number 
+    subTotal: { type: Number, required: true },
+    taxTotal: { type: Number, required: true },
+    total: { type: Number, required: true }
 }, 
     { timestamps: true }
 );

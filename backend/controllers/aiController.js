@@ -1,9 +1,7 @@
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Invoice = require('../models/Invoice');
 
-const ai = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const parseInvoiceFromText = async (req, res) => {
     const { text } = req.body;
@@ -38,12 +36,10 @@ const parseInvoiceFromText = async (req, res) => {
             Ekstrak data dan berikan hanya output JSON, tanpa teks atau penjelasan tambahan.
         `;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: prompt, 
-        }); 
-
-        let responseText = response.text; 
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const responseText = response.text();
 
         if (typeof responseText !== 'string') {
             if (typeof response.text === 'function') {
@@ -63,7 +59,7 @@ const parseInvoiceFromText = async (req, res) => {
 };
 
 const generateReminderEmail = async (req, res) => {
-    const { invoiceId } = req.body; 
+    const { invoiceId } = req.body;
 
     if (!invoiceId) {
         return res.status(400).json({ message: 'ID Faktur diperlukan' }); 
@@ -90,10 +86,10 @@ const generateReminderEmail = async (req, res) => {
 
         const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
-            contents: prompt, 
-        }); 
+            contents: prompt,
+        });
 
-        res.status(200).json({ reminderText: response.text }); 
+        res.status(200).json({ reminderText: response.text });
     } catch (error) {
         return res.status(500).json({ message: 'Terjadi kesalahan saat membuat email pengingat dengan AI', error:error.message });
     }

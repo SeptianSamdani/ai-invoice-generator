@@ -136,9 +136,8 @@ const SignUp = () => {
       
       console.log('Registration response:', response); // Debug log
 
-      if (response.status === 201 && response.data.success) {
-        const userData = response.data.data;
-        const { token } = userData; 
+      if (response.status === 201) {
+        const { token, ...userData } = response.data; 
         
         if (token) {
           setSuccess("Account created successfully! Auto-logging you in..."); 
