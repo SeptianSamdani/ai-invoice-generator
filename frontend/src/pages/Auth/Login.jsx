@@ -1,8 +1,7 @@
-import React from 'react'
-import { useAuth } from '../../context/AuthContext'
-import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { ArrowRight, Eye, EyeOff, FileText, Loader2, Lock, Mail } from 'lucide-react';  
+import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, ArrowRight, FileText } from 'lucide-react';
 import { validateEmail, validatePassword } from '../../utils/helper';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
@@ -19,7 +18,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [fieldErrors, setFieldErrors] = useState({
     email: "",
     password: ""
@@ -28,35 +26,21 @@ const Login = () => {
     email: false,
     password: false
   });
-  
- // --- Validasi dan Logika Form ---
+
   const validate = () => {
     const errors = { email: "", password: "" };
-
-    // Gunakan fungsi validateEmail yang diimpor
     const emailError = validateEmail(formData.email);
-    if (emailError) {
-      errors.email = emailError;
-    }
-
-    // Gunakan fungsi validatePassword yang diimpor
+    if (emailError) errors.email = emailError;
     const passwordError = validatePassword(formData.password);
-    if (passwordError) {
-      errors.password = passwordError;
-    }
-
+    if (passwordError) errors.password = passwordError;
     setFieldErrors(errors);
-    
-    // Kembalikan true jika tidak ada error, false jika ada
     return !errors.email && !errors.password;
   };
-  
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if(touched[name]) {
-        validate();
-    }
+    if (touched[name]) validate();
   };
 
   const handleBlur = (e) => {
@@ -81,174 +65,189 @@ const Login = () => {
 
     setIsLoading(true);
     setError("");
-    setSuccess("");
 
     try {
-      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, formData); 
+      const response = await axiosInstance.post(API_PATHS.AUTH.LOGIN, formData);
 
       if (response.status === 200) {
-        const { token } = response.data; 
-
+        const { token } = response.data;
         if (token) {
-          setSuccess("Login successfull!"); 
-          login(response.data, token); 
-
-          // Redirect based on role 
+          login(response.data, token);
           setTimeout(() => {
-            window.location.href = '/dashboard'
-          }, 2000); 
+            window.location.href = '/dashboard';
+          }, 500);
         }
       } else {
-        setError(response.data.message || "Invalid credentials"); 
+        setError(response.data.message || "Invalid credentials");
       }
     } catch (err) {
       if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message)
+        setError(err.response.data.message);
       } else {
-        setError("An error occured during login."); 
+        setError("An error occurred during login.");
       }
     } finally {
-      setIsLoading(false); 
+      setIsLoading(false);
     }
   };
 
   return (
-    // Container utama dengan latar belakang biru muda
-    <div className="flex items-center justify-center min-h-screen bg-blue-50 p-4">
-      
-      {/* Kartu Login */}
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
-        
-        {/* Header */}
-        <div className="text-center">
-          <div className="inline-block p-3 mb-4 text-white bg-blue-800 rounded-full">
-            <FileText className='w-7 h-7' />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Login to your Account
-          </h1>
-          <p className='mt-2 text-sm text-gray-500'>
-            Welcome back to Invoice Generator
-          </p>
-        </div>
-
-        {/* Form */}
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          
-          {/* Input Email */}
-          <div className="space-y-2">
-            <label className='text-sm font-medium text-gray-700'>
-              Email
-            </label>
-            <div className="relative">
-              <Mail className='absolute w-5 h-5 text-gray-400 top-1/2 left-4 -translate-y-1/2' />
-              <input
-                name='email'
-                type='email'
-                required
-                value={formData.email}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all bg-gray-50 ${
-                  fieldErrors.email && touched.email
-                    ? "border-red-400 focus:ring-red-500" :
-                    "border-gray-300 focus:ring-blue-500"
-                }
-                `}
-                placeholder='Enter your email'
-              />
+    <div className="min-h-screen bg-white flex">
+      {/* Left Side - Form */}
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md space-y-8">
+          {/* Logo & Header */}
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-900 rounded-lg mb-6">
+              <FileText className="w-7 h-7 text-white" strokeWidth={2} />
             </div>
-            {fieldErrors.email && touched.email && (
-              <p className='text-xs text-red-500'>{fieldErrors.email}</p>
-            )}
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+              Welcome back
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Sign in to your account to continue
+            </p>
           </div>
 
-          {/* Input Password */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className='absolute w-5 h-5 text-gray-400 top-1/2 left-4 -translate-y-1/2' />
-              <input
-                name='password'
-                type={showPassword ? "text" : "password"}
-                required
-                value={formData.password}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all bg-gray-50 ${
-                  fieldErrors.password && touched.password
-                    ? "border-red-400 focus:ring-red-500" :
-                    "border-gray-300 focus:ring-blue-500"
-                }`}
-                placeholder='Enter your password'
-              />
-              <button
-                type='button'
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute text-gray-400 transition-colors top-1/2 right-4 -translate-y-1/2 hover:text-gray-600"
-              >
-                {showPassword ? (
-                  <EyeOff className='w-5 h-5' />
-                ) :
-                  <Eye className='w-5 h-5' />
-                }
+          {/* Form */}
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            {/* Error Alert */}
+            {error && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <p className="text-sm text-slate-900">{error}</p>
+              </div>
+            )}
+
+            <div className="space-y-5">
+              {/* Email Input */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-slate-900 mb-2">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  className={`block w-full px-4 py-3 bg-white border ${
+                    fieldErrors.email && touched.email
+                      ? 'border-slate-900'
+                      : 'border-slate-200'
+                  } rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors`}
+                  placeholder="name@company.com"
+                />
+                {fieldErrors.email && touched.email && (
+                  <p className="mt-2 text-xs text-slate-600">{fieldErrors.email}</p>
+                )}
+              </div>
+
+              {/* Password Input */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-slate-900 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    className={`block w-full px-4 py-3 pr-12 bg-white border ${
+                      fieldErrors.password && touched.password
+                        ? 'border-slate-900'
+                        : 'border-slate-200'
+                    } rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors`}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                {fieldErrors.password && touched.password && (
+                  <p className="mt-2 text-xs text-slate-600">{fieldErrors.password}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Forgot Password Link */}
+            <div className="flex items-center justify-end">
+              <button type="button" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
+                Forgot password?
               </button>
             </div>
-              {fieldErrors.password && touched.password && (
-                <p className='text-xs text-red-500'>{fieldErrors.password}</p>
-              )}
-          </div>
 
-          {/* Pesan Error/Success */}
-          {error && (
-            <div className="p-3 text-sm text-center text-red-700 bg-red-100 rounded-lg">
-              <p>{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="p-3 text-sm text-center text-green-700 bg-green-100 rounded-lg">
-              <p>{success}</p>
-            </div>
-          )}
-
-          {/* Tombol Sign In */}
-          <button
-            type="submit"
-            disabled={isLoading || !isFormValid()}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 font-semibold text-white bg-blue-800 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-800/30 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className='w-5 h-5 animate-spin' />
-                Signing In...
-              </>
-            ) : (
-              <>
-                Sign In
-                <ArrowRight className='w-5 h-5' />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Footer */}
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an Account? {" "}
+            {/* Submit Button */}
             <button
-              onClick={() => navigate('/sign-up')}
-              className="font-semibold text-blue-800 transition-all hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-800"
+              type="submit"
+              disabled={isLoading || !isFormValid()}
+              className="group relative w-full flex items-center justify-center px-6 py-3 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              Sign Up
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
+
+            {/* Sign Up Link */}
+            <div className="text-center pt-4 border-t border-slate-100">
+              <p className="text-sm text-slate-600">
+                Don't have an account?{' '}
+                <Link
+                  to="/sign-up"
+                  className="font-medium text-slate-900 hover:text-slate-700 transition-colors"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Right Side - Image/Branding */}
+      <div className="hidden lg:flex lg:flex-1 bg-slate-900 items-center justify-center p-12">
+        <div className="max-w-lg space-y-8 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-sm">
+            <FileText className="w-10 h-10 text-white" strokeWidth={1.5} />
+          </div>
+          <h2 className="text-4xl font-bold text-white leading-tight">
+            Manage your invoices with ease
+          </h2>
+          <p className="text-lg text-slate-300 leading-relaxed">
+            Professional invoice management powered by AI. Create, track, and manage invoices in minutes.
           </p>
+          <div className="flex items-center justify-center gap-2 pt-8">
+            <div className="w-2 h-2 rounded-full bg-white"></div>
+            <div className="w-2 h-2 rounded-full bg-white/40"></div>
+            <div className="w-2 h-2 rounded-full bg-white/40"></div>
+          </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 export default Login;

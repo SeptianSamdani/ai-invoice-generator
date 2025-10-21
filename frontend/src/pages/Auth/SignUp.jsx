@@ -1,117 +1,82 @@
-import React, { useState } from 'react'
-import { useAuth } from '../../context/AuthContext'
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Eye, EyeOff, FileText, Loader2, Lock, Mail, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, ArrowRight, FileText, Check } from 'lucide-react';
 import { validateEmail, validatePassword } from '../../utils/helper';
 import axiosInstance from '../../utils/axiosInstance';
 import { API_PATHS } from '../../utils/apiPaths';
 
 const SignUp = () => {
-  const { login } = useAuth(); 
-  const navigate = useNavigate(); 
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    name: "", 
-    email: "", 
-    password: "", 
-    confirmPassword: "", 
-  }); 
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
 
-  const [showPassword, setShowPassword] = useState(false); 
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); 
-  const [isLoading, setIsLoading] = useState(false); 
-  const [error, setError] = useState(""); 
-  const [success, setSuccess] = useState(""); 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({
-    name: "", 
-    email: "", 
-    password: "", 
-    confirmPassword: "", 
-  }); 
-
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [touched, setTouched] = useState({
-    name: false, 
-    email: false, 
-    password: false, 
+    name: false,
+    email: false,
+    password: false,
     confirmPassword: false,
-  }); 
+  });
 
-  // --- Validation functions ---
   const validateName = (name) => {
-    if (!name.trim()) {
-      return "Name is required";
-    }
-    if (name.trim().length < 2) {
-      return "Name must be at least 2 characters";
-    }
-    if (name.trim().length > 50) {
-      return "Name must not exceed 50 characters";
-    }
+    if (!name.trim()) return "Name is required";
+    if (name.trim().length < 2) return "Name must be at least 2 characters";
+    if (name.trim().length > 50) return "Name must not exceed 50 characters";
     return "";
-  }; 
+  };
 
   const validateConfirmPassword = (confirmPassword, password) => {
-    if (!confirmPassword) {
-      return "Please confirm your password";
-    }
-    if (confirmPassword !== password) {
-      return "Passwords do not match";
-    }
+    if (!confirmPassword) return "Please confirm your password";
+    if (confirmPassword !== password) return "Passwords do not match";
     return "";
-  }; 
+  };
 
-  // --- Validasi dan Logika Form ---
   const validate = () => {
     const errors = { name: "", email: "", password: "", confirmPassword: "" };
-
-    // Validasi name
     const nameError = validateName(formData.name);
-    if (nameError) {
-      errors.name = nameError;
-    }
-
-    // Gunakan fungsi validateEmail yang diimpor
+    if (nameError) errors.name = nameError;
     const emailError = validateEmail(formData.email);
-    if (emailError) {
-      errors.email = emailError;
-    }
-
-    // Gunakan fungsi validatePassword yang diimpor
+    if (emailError) errors.email = emailError;
     const passwordError = validatePassword(formData.password);
-    if (passwordError) {
-      errors.password = passwordError;
-    }
-
-    // Validasi confirm password
+    if (passwordError) errors.password = passwordError;
     const confirmPasswordError = validateConfirmPassword(formData.confirmPassword, formData.password);
-    if (confirmPasswordError) {
-      errors.confirmPassword = confirmPasswordError;
-    }
-
+    if (confirmPasswordError) errors.confirmPassword = confirmPasswordError;
     setFieldErrors(errors);
-    
-    // Kembalikan true jika tidak ada error, false jika ada
     return !errors.name && !errors.email && !errors.password && !errors.confirmPassword;
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if(touched[name]) {
-        validate();
-    }
-  }; 
+    if (touched[name]) validate();
+  };
 
   const handleBlur = (e) => {
     const { name } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
     validate();
-  }; 
+  };
 
   const isFormValid = () => {
-    return !fieldErrors.name && !fieldErrors.email && !fieldErrors.password && !fieldErrors.confirmPassword && 
-           formData.name && formData.email && formData.password && formData.confirmPassword;
-  }; 
+    return !fieldErrors.name && !fieldErrors.email && !fieldErrors.password && !fieldErrors.confirmPassword &&
+      formData.name && formData.email && formData.password && formData.confirmPassword;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -125,263 +90,294 @@ const SignUp = () => {
 
     setIsLoading(true);
     setError("");
-    setSuccess("");
 
     try {
-      const { confirmPassword, ...submitData } = formData; // Remove confirmPassword from submission
-      
-      console.log('Submitting registration data:', submitData); // Debug log
-      
-      const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, submitData); 
-      
-      console.log('Registration response:', response); // Debug log
+      const { confirmPassword, ...submitData } = formData;
+      const response = await axiosInstance.post(API_PATHS.AUTH.REGISTER, submitData);
 
       if (response.status === 201) {
-        const { token, ...userData } = response.data; 
+        const { token, ...userData } = response.data;
         
         if (token) {
-          setSuccess("Account created successfully! Auto-logging you in..."); 
-          
-          // Auto login user after successful signup
-          login(userData, token); 
-          
+          login(userData, token);
           setTimeout(() => {
             window.location.href = '/dashboard';
-          }, 2000); 
+          }, 500);
         } else {
-          setSuccess("Account created successfully! Redirecting to login..."); 
           setTimeout(() => {
             navigate('/login');
-          }, 2000); 
+          }, 1500);
         }
       } else {
-        setError(response.data.message || "Registration failed"); 
+        setError(response.data.message || "Registration failed");
       }
     } catch (err) {
-      console.error('Registration error:', err); // Debug log
-      
       if (err.response) {
-        // Server responded with error status
         const errorMessage = err.response.data?.message || "Registration failed";
         setError(errorMessage);
-        console.error('Server error response:', err.response.data);
       } else if (err.request) {
-        // Request made but no response received
         setError("Network error. Please check your connection.");
-        console.error('Network error:', err.request);
       } else {
-        // Something else happened
         setError("An unexpected error occurred.");
-        console.error('Unexpected error:', err.message);
       }
     } finally {
-      setIsLoading(false); 
+      setIsLoading(false);
     }
-  }; 
+  };
+
+  const features = [
+    "AI-powered invoice generation",
+    "Automated payment reminders",
+    "Professional templates",
+    "Real-time analytics"
+  ];
 
   return (
-    // Container utama dengan latar belakang biru muda
-    <div className="flex items-center justify-center min-h-screen bg-blue-50 p-4">
-      
-      {/* Kartu SignUp */}
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-2xl shadow-xl">
-        
-        {/* Header */}
-        <div className="text-center">
-          <div className="inline-block p-3 mb-4 text-white bg-blue-800 rounded-full">
-            <FileText className='w-7 h-7' />
+    <div className="min-h-screen bg-white flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:flex-1 bg-slate-900 items-center justify-center p-12">
+        <div className="max-w-lg space-y-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-2xl backdrop-blur-sm">
+            <FileText className="w-10 h-10 text-white" strokeWidth={1.5} />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Create your Account
-          </h1>
-          <p className='mt-2 text-sm text-gray-500'>
-            Join Invoice Generator today
+          <h2 className="text-4xl font-bold text-white leading-tight">
+            Start managing invoices professionally
+          </h2>
+          <p className="text-lg text-slate-300 leading-relaxed">
+            Join thousands of businesses using our platform to streamline their invoicing process.
           </p>
-        </div>
-
-        {/* Form */}
-        <form className="space-y-5" onSubmit={handleSubmit}>
           
-          {/* Input Name */}
-          <div className="space-y-2">
-            <label className='text-sm font-medium text-gray-700'>
-              Full Name
-            </label>
-            <div className="relative">
-              <User className='absolute w-5 h-5 text-gray-400 top-1/2 left-4 -translate-y-1/2' />
-              <input
-                name='name'
-                type='text'
-                required
-                value={formData.name}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all bg-gray-50 ${
-                  fieldErrors.name && touched.name
-                    ? "border-red-400 focus:ring-red-500" :
-                    "border-gray-300 focus:ring-blue-500"
-                }
-                `}
-                placeholder='Enter your full name'
-              />
+          {/* Features List */}
+          <div className="space-y-4 pt-4">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-6 h-6 bg-white/10 rounded-full flex items-center justify-center">
+                  <Check className="w-4 h-4 text-white" strokeWidth={2.5} />
+                </div>
+                <span className="text-slate-300">{feature}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Form */}
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md space-y-8">
+          {/* Logo & Header - Mobile Only */}
+          <div className="text-center lg:hidden">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-slate-900 rounded-lg mb-6">
+              <FileText className="w-7 h-7 text-white" strokeWidth={2} />
             </div>
-            {fieldErrors.name && touched.name && (
-              <p className='text-xs text-red-500'>{fieldErrors.name}</p>
-            )}
           </div>
 
-          {/* Input Email */}
-          <div className="space-y-2">
-            <label className='text-sm font-medium text-gray-700'>
-              Email
-            </label>
-            <div className="relative">
-              <Mail className='absolute w-5 h-5 text-gray-400 top-1/2 left-4 -translate-y-1/2' />
-              <input
-                name='email'
-                type='email'
-                required
-                value={formData.email}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all bg-gray-50 ${
-                  fieldErrors.email && touched.email
-                    ? "border-red-400 focus:ring-red-500" :
-                    "border-gray-300 focus:ring-blue-500"
-                }
-                `}
-                placeholder='Enter your email'
-              />
-            </div>
-            {fieldErrors.email && touched.email && (
-              <p className='text-xs text-red-500'>{fieldErrors.email}</p>
-            )}
+          {/* Header */}
+          <div className="text-center lg:text-left">
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+              Create your account
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">
+              Get started with your free account
+            </p>
           </div>
 
-          {/* Input Password */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className='absolute w-5 h-5 text-gray-400 top-1/2 left-4 -translate-y-1/2' />
+          {/* Form */}
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            {/* Error Alert */}
+            {error && (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <p className="text-sm text-slate-900">{error}</p>
+              </div>
+            )}
+
+            <div className="space-y-5">
+              {/* Name Input */}
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-slate-900 mb-2">
+                  Full name
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  className={`block w-full px-4 py-3 bg-white border ${
+                    fieldErrors.name && touched.name
+                      ? 'border-slate-900'
+                      : 'border-slate-200'
+                  } rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors`}
+                  placeholder="John Doe"
+                />
+                {fieldErrors.name && touched.name && (
+                  <p className="mt-2 text-xs text-slate-600">{fieldErrors.name}</p>
+                )}
+              </div>
+
+              {/* Email Input */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-slate-900 mb-2">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  className={`block w-full px-4 py-3 bg-white border ${
+                    fieldErrors.email && touched.email
+                      ? 'border-slate-900'
+                      : 'border-slate-200'
+                  } rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors`}
+                  placeholder="name@company.com"
+                />
+                {fieldErrors.email && touched.email && (
+                  <p className="mt-2 text-xs text-slate-600">{fieldErrors.email}</p>
+                )}
+              </div>
+
+              {/* Password Input */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-slate-900 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    required
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    className={`block w-full px-4 py-3 pr-12 bg-white border ${
+                      fieldErrors.password && touched.password
+                        ? 'border-slate-900'
+                        : 'border-slate-200'
+                    } rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors`}
+                    placeholder="Create a password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                {fieldErrors.password && touched.password && (
+                  <p className="mt-2 text-xs text-slate-600">{fieldErrors.password}</p>
+                )}
+              </div>
+
+              {/* Confirm Password Input */}
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-900 mb-2">
+                  Confirm password
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    required
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    className={`block w-full px-4 py-3 pr-12 bg-white border ${
+                      fieldErrors.confirmPassword && touched.confirmPassword
+                        ? 'border-slate-900'
+                        : 'border-slate-200'
+                    } rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-colors`}
+                    placeholder="Confirm your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                {fieldErrors.confirmPassword && touched.confirmPassword && (
+                  <p className="mt-2 text-xs text-slate-600">{fieldErrors.confirmPassword}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Terms & Conditions */}
+            <div className="flex items-start">
               <input
-                name='password'
-                type={showPassword ? "text" : "password"}
+                id="terms"
+                type="checkbox"
                 required
-                value={formData.password}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all bg-gray-50 ${
-                  fieldErrors.password && touched.password
-                    ? "border-red-400 focus:ring-red-500" :
-                    "border-gray-300 focus:ring-blue-500"
-                }`}
-                placeholder='Create a password'
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
               />
-              <button
-                type='button'
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute text-gray-400 transition-colors top-1/2 right-4 -translate-y-1/2 hover:text-gray-600"
-              >
-                {showPassword ? (
-                  <EyeOff className='w-5 h-5' />
-                ) :
-                  <Eye className='w-5 h-5' />
-                }
-              </button>
+              <label htmlFor="terms" className="ml-3 text-sm text-slate-600">
+                I agree to the{' '}
+                <button type="button" className="text-slate-900 hover:text-slate-700 transition-colors">
+                  Terms of Service
+                </button>{' '}
+                and{' '}
+                <button type="button" className="text-slate-900 hover:text-slate-700 transition-colors">
+                  Privacy Policy
+                </button>
+              </label>
             </div>
-            {fieldErrors.password && touched.password && (
-              <p className='text-xs text-red-500'>{fieldErrors.password}</p>
-            )}
-          </div>
 
-          {/* Input Confirm Password */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Confirm Password
-            </label>
-            <div className="relative">
-              <Lock className='absolute w-5 h-5 text-gray-400 top-1/2 left-4 -translate-y-1/2' />
-              <input
-                name='confirmPassword'
-                type={showConfirmPassword ? "text" : "password"}
-                required
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all bg-gray-50 ${
-                  fieldErrors.confirmPassword && touched.confirmPassword
-                    ? "border-red-400 focus:ring-red-500" :
-                    "border-gray-300 focus:ring-blue-500"
-                }`}
-                placeholder='Confirm your password'
-              />
-              <button
-                type='button'
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute text-gray-400 transition-colors top-1/2 right-4 -translate-y-1/2 hover:text-gray-600"
-              >
-                {showConfirmPassword ? (
-                  <EyeOff className='w-5 h-5' />
-                ) :
-                  <Eye className='w-5 h-5' />
-                }
-              </button>
-            </div>
-            {fieldErrors.confirmPassword && touched.confirmPassword && (
-              <p className='text-xs text-red-500'>{fieldErrors.confirmPassword}</p>
-            )}
-          </div>
-
-          {/* Pesan Error/Success */}
-          {error && (
-            <div className="p-3 text-sm text-center text-red-700 bg-red-100 rounded-lg">
-              <p>{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="p-3 text-sm text-center text-green-700 bg-green-100 rounded-lg">
-              <p>{success}</p>
-            </div>
-          )}
-
-          {/* Tombol Sign Up */}
-          <button
-            type="submit"
-            disabled={isLoading || !isFormValid()}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 font-semibold text-white bg-blue-800 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-800/30 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className='w-5 h-5 animate-spin' />
-                Creating Account...
-              </>
-            ) : (
-              <>
-                Sign Up
-                <ArrowRight className='w-5 h-5' />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Footer */}
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Already have an Account? {" "}
+            {/* Submit Button */}
             <button
-              onClick={() => navigate('/login')}
-              className="font-semibold text-blue-800 transition-all hover:underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-800"
+              type="submit"
+              disabled={isLoading || !isFormValid()}
+              className="group relative w-full flex items-center justify-center px-6 py-3 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              Sign In
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  Create account
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
-          </p>
+
+            {/* Sign In Link */}
+            <div className="text-center pt-4 border-t border-slate-100">
+              <p className="text-sm text-slate-600">
+                Already have an account?{' '}
+                <Link
+                  to="/login"
+                  className="font-medium text-slate-900 hover:text-slate-700 transition-colors"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </form>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default SignUp
+export default SignUp;
