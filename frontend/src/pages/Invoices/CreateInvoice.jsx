@@ -8,8 +8,8 @@ import Button from '../../components/ui/Button';
 import InputField from '../../components/ui/InputField';
 import TextareaField from '../../components/ui/TextareaField';
 import SelectField from '../../components/ui/SelectField';
-import { Plus, Trash2, FileText, Calendar, DollarSign } from 'lucide-react';
-import toast from 'react-hot-toast'; 
+import { Plus, Trash2, FileText, Save, ArrowLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -58,7 +58,6 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
 
     useEffect(() => {
         let isMounted = true;
-
         const aiData = location.state?.aiData;
 
         if (aiData) {
@@ -103,7 +102,7 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
                         setFormData((prev) => ({ ...prev, invoiceNumber: newInvoiceNumber }));
                     }
                 } catch (error) {
-                    console.error("Gagal membuat nomor faktur", error);
+                    console.error("Failed to generate invoice number", error);
                     if (isMounted) {
                         setFormData((prev) => ({ ...prev, invoiceNumber: `INV-${Date.now().toString().slice(-5)}` }));
                     }
@@ -123,8 +122,6 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
     const handleInputChange = (e, section, index) => {
         const { name, value, type } = e.target;
         const parsedValue = type === 'number' ? parseFloat(value) || 0 : value;
-
-        // Clear error for this field
         setErrors(prev => ({ ...prev, [name]: '' }));
 
         if (section === 'items') {
@@ -147,7 +144,7 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
 
     const handleRemoveItem = (index) => {
         if (formData.items.length === 1) {
-            toast.error("Minimal harus ada 1 item");
+            toast.error("At least one item is required");
             return;
         }
         const newItems = formData.items.filter((_, i) => i !== index);
@@ -168,32 +165,18 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
 
     const validateForm = () => {
         const newErrors = {};
-
-        if (!formData.invoiceNumber) {
-            newErrors.invoiceNumber = "Nomor faktur wajib diisi";
+        if (!formData.invoiceNumber) newErrors.invoiceNumber = "Invoice number is required";
+        if (!formData.dueDate) newErrors.dueDate = "Due date is required";
+        else if (moment(formData.dueDate).isBefore(moment(formData.invoiceDate))) {
+            newErrors.dueDate = "Due date must be after invoice date";
         }
-
-        if (!formData.dueDate) {
-            newErrors.dueDate = "Tanggal jatuh tempo wajib diisi";
-        } else if (moment(formData.dueDate).isBefore(moment(formData.invoiceDate))) {
-            newErrors.dueDate = "Tanggal jatuh tempo harus setelah tanggal faktur";
-        }
-
-        if (!formData.billTo.clientName) {
-            newErrors.clientName = "Nama klien wajib diisi";
-        }
-
-        if (!formData.billTo.email) {
-            newErrors.clientEmail = "Email klien wajib diisi";
-        }
+        if (!formData.billTo.clientName) newErrors.clientName = "Client name is required";
+        if (!formData.billTo.email) newErrors.clientEmail = "Client email is required";
 
         const hasValidItem = formData.items.some(item => 
             item.name.trim() !== "" && item.quantity > 0 && item.unitPrice > 0
         );
-
-        if (!hasValidItem) {
-            newErrors.items = "Minimal satu item valid diperlukan (dengan nama, jumlah > 0, dan harga > 0)";
-        }
+        if (!hasValidItem) newErrors.items = "At least one valid item is required";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -203,7 +186,7 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
         e.preventDefault();
         
         if (!validateForm()) {
-            toast.error("Harap perbaiki kesalahan sebelum mengirim");
+            toast.error("Please fix errors before submitting");
             return;
         }
 
@@ -221,10 +204,10 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
         } else {
             try {
                 await axiosInstance.post(API_PATHS.INVOICE.CREATE, finalFormData); 
-                toast.success("Faktur berhasil dibuat."); 
+                toast.success("Invoice created successfully"); 
                 navigate("/invoices"); 
             } catch (error) {
-                toast.error("Gagal membuat faktur.");
+                toast.error("Failed to create invoice");
                 console.error(error); 
             }
         }
@@ -233,209 +216,232 @@ const CreateInvoice = ({ existingInvoice, onSave }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 py-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-6xl mx-auto">
-                <form onSubmit={handleSubmit} className='space-y-6'>
-                    {/* Header */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto space-y-6">
+            <form onSubmit={handleSubmit} className='space-y-6'>
+                {/* Header */}
+                <div className="bg-white border border-slate-200 rounded-lg p-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/invoices')}
+                                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                                <ArrowLeft className="w-5 h-5" />
+                            </button>
                             <div>
-                                <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                                    <FileText className="text-blue-600" size={32} />
-                                    {existingInvoice ? "Ubah Faktur" : "Buat Faktur Baru"}
-                                </h2>
-                                <p className="text-gray-500 mt-1">Isi detail di bawah untuk membuat faktur Anda</p>
+                                <h1 className="text-2xl font-bold text-slate-900">
+                                    {existingInvoice ? "Edit Invoice" : "Create Invoice"}
+                                </h1>
+                                <p className="text-sm text-slate-600 mt-1">Fill in the details below</p>
                             </div>
-                            <Button type="submit" isLoading={isLoading || isGeneratingNumber} className="w-full sm:w-auto">
-                                {existingInvoice ? "Simpan Perubahan" : "Simpan Faktur"}
-                            </Button>
                         </div>
+                        <Button 
+                            type="submit" 
+                            isLoading={isLoading || isGeneratingNumber}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+                        >
+                            <Save className="w-4 h-4" />
+                            {existingInvoice ? "Update" : "Save"} Invoice
+                        </Button>
                     </div>
+                </div>
 
-                    {/* Invoice Details */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                        <div className="flex items-center gap-2 mb-6">
-                            <Calendar className="text-blue-600" size={24} />
-                            <h3 className="text-xl font-semibold text-gray-800">Detail Faktur</h3>
+                {/* Invoice Details */}
+                <div className="bg-white border border-slate-200 rounded-lg p-6">
+                    <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <FileText className="w-5 h-5" />
+                        Invoice Details
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <InputField
+                                label="Invoice Number"
+                                name="invoiceNumber"
+                                readOnly
+                                value={formData.invoiceNumber}
+                                placeholder={isGeneratingNumber ? "Generating..." : ""}
+                                disabled
+                            />
+                            {errors.invoiceNumber && <p className="text-red-600 text-xs mt-1">{errors.invoiceNumber}</p>}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div>
-                                <InputField
-                                    label="Nomor Faktur"
-                                    name="invoiceNumber"
-                                    readOnly
-                                    value={formData.invoiceNumber}
-                                    placeholder={isGeneratingNumber ? "Membuat..." : ""}
-                                    disabled
-                                />
-                                {errors.invoiceNumber && <p className="text-red-500 text-xs mt-1">{errors.invoiceNumber}</p>}
-                            </div>
+                        <InputField 
+                            label='Invoice Date' 
+                            type="date" 
+                            name="invoiceDate" 
+                            value={formData.invoiceDate} 
+                            onChange={handleInputChange} 
+                        />
+                        <div>
                             <InputField 
-                                label='Tanggal Faktur' 
+                                label='Due Date' 
                                 type="date" 
-                                name="invoiceDate" 
-                                value={formData.invoiceDate} 
+                                name="dueDate" 
+                                value={formData.dueDate} 
                                 onChange={handleInputChange} 
                             />
-                            <div>
-                                <InputField 
-                                    label='Tanggal Jatuh Tempo' 
-                                    type="date" 
-                                    name="dueDate" 
-                                    value={formData.dueDate} 
-                                    onChange={handleInputChange} 
-                                />
-                                {errors.dueDate && <p className="text-red-500 text-xs mt-1">{errors.dueDate}</p>}
-                            </div>
+                            {errors.dueDate && <p className="text-red-600 text-xs mt-1">{errors.dueDate}</p>}
                         </div>
                     </div>
+                </div>
 
-                    {/* Bill From / Bill To */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                            <h3 className="text-lg font-semibold text-blue-700 border-b-2 border-blue-100 pb-3 mb-4">Dari</h3>
-                            <div className="space-y-4">
-                                <InputField label='Nama Bisnis' name='businessName' value={formData.billFrom.businessName} onChange={(e) => handleInputChange(e, "billFrom")} />
-                                <InputField label='Email' name='email' type="email" value={formData.billFrom.email} onChange={(e) => handleInputChange(e, "billFrom")} />
-                                <TextareaField label='Alamat' name='address' value={formData.billFrom.address} onChange={(e) => handleInputChange(e, "billFrom")} />
-                                <InputField label='Telepon' name='phone' value={formData.billFrom.phone} onChange={(e) => handleInputChange(e, "billFrom")} />
-                            </div>
-                        </div>
-                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                            <h3 className="text-lg font-semibold text-blue-700 border-b-2 border-blue-100 pb-3 mb-4">Kepada</h3>
-                            <div className="space-y-4">
-                                <div>
-                                    <InputField label='Nama Klien' name='clientName' value={formData.billTo.clientName} onChange={(e) => handleInputChange(e, "billTo")} />
-                                    {errors.clientName && <p className="text-red-500 text-xs mt-1">{errors.clientName}</p>}
-                                </div>
-                                <div>
-                                    <InputField label='Email Klien' name='email' type="email" value={formData.billTo.email} onChange={(e) => handleInputChange(e, "billTo")} />
-                                    {errors.clientEmail && <p className="text-red-500 text-xs mt-1">{errors.clientEmail}</p>}
-                                </div>
-                                <TextareaField label='Alamat Klien' name='address' value={formData.billTo.address} onChange={(e) => handleInputChange(e, "billTo")} />
-                                <InputField label='Telepon' name='phone' value={formData.billTo.phone} onChange={(e) => handleInputChange(e, "billTo")} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Items */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-2">
-                                <DollarSign className="text-blue-600" size={24} />
-                                <h3 className="text-xl font-semibold text-gray-800">Item</h3>
-                            </div>
-                            <Button variant="outline" type="button" onClick={handleAddItem} icon={Plus} className="text-sm">
-                                Tambah Item
-                            </Button>
-                        </div>
-                        
-                        {errors.items && <p className="text-red-500 text-sm mb-4 bg-red-50 p-3 rounded-lg">{errors.items}</p>}
-                        
+                {/* Bill From / Bill To */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white border border-slate-200 rounded-lg p-6">
+                        <h3 className="text-base font-semibold text-slate-900 mb-4 pb-3 border-b border-slate-200">From</h3>
                         <div className="space-y-4">
-                            {/* Headers for desktop */}
-                            <div className="hidden md:grid md:grid-cols-[3fr_1fr_1.5fr_1fr_1.5fr_auto] gap-4 text-xs uppercase text-gray-600 font-semibold px-3">
-                                <span>Nama Item</span>
-                                <span className="text-center">Jumlah</span>
-                                <span className="text-right">Harga Satuan</span>
-                                <span className="text-center">Pajak (%)</span>
-                                <span className="text-right">Total</span>
-                                <span className="w-10"></span>
-                            </div>
-                            {formData.items.map((item, index) => (
-                                <div key={index} className="grid grid-cols-1 md:grid-cols-[3fr_1fr_1.5fr_1fr_1.5fr_auto] gap-4 items-center p-4 rounded-lg bg-gradient-to-r from-gray-50 to-blue-50 hover:from-blue-50 hover:to-blue-100 transition-all duration-200 border border-gray-200">
-                                   <InputField 
-                                       placeholder="Nama Item" 
-                                       name="name" 
-                                       value={item.name} 
-                                       onChange={(e) => handleInputChange(e, 'items', index)} 
-                                       className="md:col-span-1" 
-                                   />
-                                   <InputField 
-                                       placeholder="1" 
-                                       name="quantity" 
-                                       type="number" 
-                                       value={item.quantity} 
-                                       onChange={(e) => handleInputChange(e, 'items', index)} 
-                                   />
-                                   <InputField 
-                                       placeholder="0.00" 
-                                       name="unitPrice" 
-                                       type="number" 
-                                       value={item.unitPrice} 
-                                       onChange={(e) => handleInputChange(e, 'items', index)} 
-                                   />
-                                   <InputField 
-                                       placeholder="0" 
-                                       name="taxPercent" 
-                                       type="number" 
-                                       value={item.taxPercent} 
-                                       onChange={(e) => handleInputChange(e, 'items', index)} 
-                                   />
-                                   <div className="bg-white rounded-lg p-2 border border-gray-300">
-                                       <p className="text-right text-gray-900 font-semibold">
-                                           {formatCurrency(item.quantity * item.unitPrice * (1 + item.taxPercent/100))}
-                                       </p>
-                                   </div>
-                                   <Button 
-                                       variant="ghost" 
-                                       type="button" 
-                                       onClick={() => handleRemoveItem(index)} 
-                                       className="text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors"
-                                   >
-                                     <Trash2 size={18} />
-                                   </Button>
-                                </div>
-                            ))}
+                            <InputField label='Business Name' name='businessName' value={formData.billFrom.businessName} onChange={(e) => handleInputChange(e, "billFrom")} />
+                            <InputField label='Email' name='email' type="email" value={formData.billFrom.email} onChange={(e) => handleInputChange(e, "billFrom")} />
+                            <TextareaField label='Address' name='address' value={formData.billFrom.address} onChange={(e) => handleInputChange(e, "billFrom")} rows={3} />
+                            <InputField label='Phone' name='phone' value={formData.billFrom.phone} onChange={(e) => handleInputChange(e, "billFrom")} />
                         </div>
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-lg p-6">
+                        <h3 className="text-base font-semibold text-slate-900 mb-4 pb-3 border-b border-slate-200">Bill To</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <InputField label='Client Name' name='clientName' value={formData.billTo.clientName} onChange={(e) => handleInputChange(e, "billTo")} />
+                                {errors.clientName && <p className="text-red-600 text-xs mt-1">{errors.clientName}</p>}
+                            </div>
+                            <div>
+                                <InputField label='Email' name='email' type="email" value={formData.billTo.email} onChange={(e) => handleInputChange(e, "billTo")} />
+                                {errors.clientEmail && <p className="text-red-600 text-xs mt-1">{errors.clientEmail}</p>}
+                            </div>
+                            <TextareaField label='Address' name='address' value={formData.billTo.address} onChange={(e) => handleInputChange(e, "billTo")} rows={3} />
+                            <InputField label='Phone' name='phone' value={formData.billTo.phone} onChange={(e) => handleInputChange(e, "billTo")} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Items */}
+                <div className="bg-white border border-slate-200 rounded-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-slate-900">Items</h2>
+                        <Button 
+                            variant="outline" 
+                            type="button" 
+                            onClick={handleAddItem}
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg hover:bg-slate-50 transition-colors text-sm"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Item
+                        </Button>
                     </div>
                     
-                    {/* Notes, Payment Terms & Total */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 space-y-4">
+                    {errors.items && <p className="text-red-600 text-sm mb-4 bg-red-50 border border-red-200 p-3 rounded-lg">{errors.items}</p>}
+                    
+                    <div className="space-y-3">
+                        {/* Headers for desktop */}
+                        <div className="hidden md:grid md:grid-cols-[2.5fr_0.8fr_1fr_0.8fr_1fr_auto] gap-3 text-xs font-semibold text-slate-600 uppercase px-3">
+                            <span>Description</span>
+                            <span className="text-center">Qty</span>
+                            <span className="text-right">Unit Price</span>
+                            <span className="text-center">Tax %</span>
+                            <span className="text-right">Total</span>
+                            <span className="w-10"></span>
+                        </div>
+                        {formData.items.map((item, index) => (
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-[2.5fr_0.8fr_1fr_0.8fr_1fr_auto] gap-3 items-end p-4 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200">
+                               <InputField 
+                                   placeholder="Item description" 
+                                   name="name" 
+                                   value={item.name} 
+                                   onChange={(e) => handleInputChange(e, 'items', index)} 
+                               />
+                               <InputField 
+                                   placeholder="1" 
+                                   name="quantity" 
+                                   type="number" 
+                                   value={item.quantity} 
+                                   onChange={(e) => handleInputChange(e, 'items', index)} 
+                               />
+                               <InputField 
+                                   placeholder="0" 
+                                   name="unitPrice" 
+                                   type="number" 
+                                   value={item.unitPrice} 
+                                   onChange={(e) => handleInputChange(e, 'items', index)} 
+                               />
+                               <InputField 
+                                   placeholder="0" 
+                                   name="taxPercent" 
+                                   type="number" 
+                                   value={item.taxPercent} 
+                                   onChange={(e) => handleInputChange(e, 'items', index)} 
+                               />
+                               <div className="flex items-center justify-end h-10">
+                                   <p className="text-sm font-semibold text-slate-900">
+                                       {formatCurrency(item.quantity * item.unitPrice * (1 + item.taxPercent/100))}
+                                   </p>
+                               </div>
+                               <button
+                                   type="button"
+                                   onClick={() => handleRemoveItem(index)}
+                                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                   title="Remove item"
+                               >
+                                 <Trash2 className="w-4 h-4" />
+                               </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                
+                {/* Notes, Payment Terms & Summary */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                        <div className="bg-white border border-slate-200 rounded-lg p-6">
                             <TextareaField 
-                                label="Catatan" 
+                                label="Notes" 
                                 name="notes" 
                                 value={formData.notes} 
                                 onChange={handleInputChange} 
-                                placeholder="Tambahkan catatan tambahan di sini..."
+                                placeholder="Additional notes or payment instructions..."
+                                rows={4}
                             />
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-lg p-6">
                             <SelectField 
-                                label="Syarat Pembayaran"
+                                label="Payment Terms"
                                 name="paymentTerms"
                                 value={formData.paymentTerms}
                                 onChange={handleInputChange}
-                                options={["Net 15", "Net 30", "Net 60", "Jatuh tempo saat diterima"]}
+                                options={["Net 15", "Net 30", "Net 60", "Due on receipt"]}
                             />
                         </div>
-                        
-                        <div className="bg-gradient-to-br from-blue-50 to-slate-100 rounded-xl shadow-lg p-6 border-2 border-blue-200">
-                            <h3 className="text-lg font-semibold text-gray-800 mb-4">Ringkasan</h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center text-gray-700 py-2 border-b border-gray-300">
-                                    <span className="font-medium">Subtotal</span>
-                                    <span className="font-semibold text-lg">{formatCurrency(subTotal)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-gray-700 py-2 border-b border-gray-300">
-                                    <span className="font-medium">Pajak</span>
-                                    <span className="font-semibold text-lg">{formatCurrency(taxTotal)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-gray-900 font-bold text-xl pt-3 bg-white rounded-lg p-4 shadow-sm">
-                                    <span>Total</span>
-                                    <span className="text-blue-600">{formatCurrency(total)}</span>
-                                </div>
+                    </div>
+                    
+                    <div className="bg-white text-black border-2 border-black  rounded-xl p-6">
+                        <h3 className="text-lg font-semibold mb-6">Summary</h3>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+                                <span className="text-slate-900">Subtotal</span>
+                                <span className="font-semibold text-lg">{formatCurrency(subTotal)}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-3 border-b border-slate-700">
+                                <span className="text-slate-900">Tax</span>
+                                <span className="font-semibold text-lg">{formatCurrency(taxTotal)}</span>
+                            </div>
+                            <div className="flex justify-between items-center pt-2">
+                                <span className="text-xl font-bold">Total</span>
+                                <span className="text-2xl font-bold">{formatCurrency(total)}</span>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Submit Button (Mobile) */}
-                    <div className="sm:hidden bg-white rounded-xl shadow-lg p-4 border border-gray-200">
-                        <Button type="submit" isLoading={isLoading || isGeneratingNumber} className="w-full">
-                            {existingInvoice ? "Simpan Perubahan" : "Simpan Faktur"}
-                        </Button>
-                    </div>
-                </form>
-            </div>
+                {/* Mobile Submit Button */}
+                <div className="sm:hidden bg-white border border-slate-200 rounded-lg p-4">
+                    <Button 
+                        type="submit" 
+                        isLoading={isLoading || isGeneratingNumber}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors"
+                    >
+                        <Save className="w-4 h-4" />
+                        {existingInvoice ? "Update" : "Save"} Invoice
+                    </Button>
+                </div>
+            </form>
         </div>
     );
 };

@@ -1,8 +1,7 @@
-// ========== DashboardLayout.jsx ==========
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useEffect, useState, useRef } from 'react'; 
-import { Menu, LogOut, Briefcase } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { Menu, X, FileText } from 'lucide-react';
 import { NAVIGATION_MENU } from '../../utils/data';
 import ProfileDropdown from './ProfileDropdown'; 
 
@@ -17,7 +16,6 @@ const DashboardLayout = ({ children, activeMenu }) => {
 
   const dropdownRef = useRef(null); 
 
-  // Handle Responsive Behavior
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -45,102 +43,117 @@ const DashboardLayout = ({ children, activeMenu }) => {
   };
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-
   const toggleProfileDropdown = () => setProfileDropdownOpen(!profileDropdownOpen);
 
-  const sidebarCollapsed = false; 
-
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-stone-50">
       {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col justify-between transition-transform duration-300 ease-in-out bg-white text-gray-800 border-r border-gray-200 ${
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out ${
           isMobile ? (sidebarOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"
-        } ${sidebarCollapsed ? 'w-20' : 'w-64'}`}
+        }`}
       >
-        <div>
-          <div className="flex items-center h-20 px-4 border-b border-gray-200">
-            <Link className='flex items-center gap-3' to='/dashboard'>
-              <Briefcase className="w-8 h-8 text-blue-800" />
-              {!sidebarCollapsed && <span className='text-lg font-bold text-blue-800 whitespace-nowrap'>AI Invoice</span>}
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center h-16 px-6 border-b border-slate-200">
+            <Link to='/dashboard' className='flex items-center gap-3'>
+              <div className="flex items-center justify-center w-8 h-8 bg-slate-900 rounded-lg">
+                <FileText className="w-5 h-5 text-white" strokeWidth={2} />
+              </div>
+              <span className='text-lg font-bold text-slate-900'>Invoice AI</span>
             </Link>
           </div>
-          <nav className="px-4 py-6 space-y-2">
+
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {NAVIGATION_MENU.map(item => {
               const IconComponent = item.icon;
+              const isActive = activeNavItem === item.id;
+              
               return (
                 <button
                   key={item.id}
                   onClick={() => handleNavigation(item.id)}
-                  className={`flex items-center w-full gap-3 p-3 rounded-lg transition-colors duration-200 ${
-                    activeNavItem === item.id
-                      ? 'bg-blue-50 text-blue-800 font-semibold'
-                      : 'text-gray-600 hover:bg-blue-50 hover:text-blue-800'
-                  } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                  className={`flex items-center w-full gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
                 >
-                  <IconComponent className="flex-shrink-0 w-6 h-6" />
-                  {!sidebarCollapsed && <span className='font-medium whitespace-nowrap'>{item.name}</span>}
+                  <IconComponent className="flex-shrink-0 w-5 h-5" strokeWidth={2} />
+                  <span>{item.name}</span>
                 </button>
               );
             })}
           </nav>
-        </div>
-        <div className="p-4 border-t border-gray-200">
-          <button
-            className={`flex items-center w-full gap-3 p-3 rounded-lg text-gray-600 hover:bg-blue-50 hover:text-blue-800 ${
-              sidebarCollapsed ? 'justify-center' : ''
-            }`}
-            onClick={logout}
-          >
-            <LogOut className="flex-shrink-0 w-6 h-6" />
-            {!sidebarCollapsed && <span className='font-medium whitespace-nowrap'>Keluar</span>}
-          </button>
-        </div>
-      </div>
 
+          {/* Footer */}
+          <div className="p-4 border-t border-slate-200">
+            <div className="px-4 py-3 bg-slate-50 rounded-lg">
+              <p className="text-xs font-medium text-slate-900 mb-1">Need help?</p>
+              <p className="text-xs text-slate-600">Contact our support team</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60" onClick={() => setSidebarOpen(false)}></div>
+        <div 
+          className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" 
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
       {/* Main Content */}
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-          isMobile ? "ml-0" : sidebarCollapsed ? 'ml-20' : 'ml-64'
-        }`}
-      >
+      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+        isMobile ? "ml-0" : 'ml-64'
+      }`}>
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between h-20 px-6 bg-white shadow-sm border-b border-gray-200">
+        <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-6 bg-white border-b border-slate-200">
           <div className="flex items-center gap-4">
             {isMobile && (
-              <button onClick={toggleSidebar} className='p-2 -ml-2 text-gray-600 rounded-full hover:bg-gray-100'>
-                <Menu className="w-6 h-6" />
+              <button 
+                onClick={toggleSidebar} 
+                className='p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors'
+              >
+                {sidebarOpen ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
               </button>
             )}
-            <div>
-              <h1 className="text-xl font-semibold text-gray-800 md:text-2xl">
-                Selamat datang kembali, {user?.name || 'Pengguna'}! 👋
-              </h1>
-              <p className="text-sm text-gray-500">
-                Berikut ringkasan Faktur Anda
-              </p>
-            </div>
           </div>
 
           <div ref={dropdownRef}>
             <ProfileDropdown 
               isOpen={profileDropdownOpen}
               onToggle={toggleProfileDropdown}
-              avatar={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=e0e7ff&color=3730a3`}
-              companyName={user?.name || 'Nama Perusahaan'}
+              avatar={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=0f172a&color=ffffff&bold=true`}
+              companyName={user?.name || 'User Name'}
               email={user?.email || 'user@example.com'}
               onLogout={logout}
             />
           </div>
         </header>
 
-        <main className="flex-grow p-6">
+        {/* Page Content */}
+        <main className="flex-1 p-6">
           {children}
         </main>
+
+        {/* Footer */}
+        <footer className="px-6 py-4 border-t border-slate-200 bg-white">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+            <p>© 2024 Invoice AI. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <button className="hover:text-slate-900 transition-colors">Privacy</button>
+              <button className="hover:text-slate-900 transition-colors">Terms</button>
+              <button className="hover:text-slate-900 transition-colors">Support</button>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
